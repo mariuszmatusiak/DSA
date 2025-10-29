@@ -1,0 +1,6 @@
+*.o
+*.dylib
+*.kext
+output/
+sca/
+.DS_Store

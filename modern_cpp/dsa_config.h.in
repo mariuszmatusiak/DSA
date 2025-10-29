@@ -1,0 +1,6 @@
+// dsa_config.h.in header config file for CMake
+// The @ variables and #pragmas below are substituted by CMake
+// According to docs define could be also cmakedefine which makes this confusing
+
+#define DSA_VERSION_MAJOR @DSA_VERSION_MAJOR@
+#define DSA_VERSION_MINOR @DSA_VERSION_MINOR@

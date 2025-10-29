@@ -1,0 +1,1 @@
+# A directory with the CppCheck config files
