@@ -8,6 +8,7 @@
 #include "dsa_structures.h"
 #include "dsa_algorithms.h"
 #include "dsa_utils.h"
+#include "dsa_concurrency.h"
 
 #include <iostream>
 #include <fstream>      // for files
@@ -51,25 +52,6 @@ typedef uint8_t result_t;
 using result_u = uint8_t;
 using ulong = unsigned long long;
 
-void threadFunc(const size_t arg, const char * name);
-
-struct PrimeNumberPromiseResult {
-    duration<double> tdiff;
-    std::pair<ulong, ulong>  range;
-    std::vector<ulong> primeNumbers;
-};
-PrimeNumberPromiseResult getPrimeNumbersAsync(const size_t max, const size_t start);
-void getPrimeNumbersPromise(const size_t max, const size_t start, std::promise<PrimeNumberPromiseResult> pval);
-
-std::mutex printMutex {}; // global
-std::mutex pMutex {}; // producer
-std::mutex cMutex {}; // consumer
-std::deque<size_t> fifoQueue {}; // p-c queue
-std::atomic_flag ready {}; // global flag for producer and consumer
-
-void producerThread(const size_t arg, const char * name);
-void consumerThread(const size_t arg, const char * name);
-
 string createDummyString() {
     const string s = "Well...";
     return s;
@@ -106,7 +88,7 @@ int main (void)
     cin.getline(inputBuffer, sizeof(inputBuffer));
     cout << std::format("You typed '{}'.", inputBuffer) << endl;
 
-    //  === ARCHITECTURE SIZEOFS ===
+    // === ARCHITECTURE SIZEOFS ===
 
     cout << "Sizeof a: " << sizeof(a) << endl;
     cout << "Size of a: " << a.size() << endl;
@@ -118,15 +100,17 @@ int main (void)
     cout << MyCStyleString << " has " << sizeof(MyCStyleString) << " bytes, but " << strlen(MyCStyleString) << " characters!" << endl;
     cout << myCStyleStringArray << " has " << sizeof(myCStyleStringArray) << " bytes, but " << strlen(myCStyleStringArray) << " characters!" << endl;
 
-    //  === BASIC AND TEMPORARY OBJECT REFERENCES ===
+    // === BASIC AND TEMPORARY OBJECT REFERENCES ===
 
     // & - reference
     // && - reference to temporary object
+
     string s = "Oh well then...";
     references(createDummyString());
     references(s);
     string s2 = "Hi!... " + s;
     std::cout << s2 << std::endl;
+
     // Additional methods:
     // s2.insert(it, what)
     // s2.erase(it)
@@ -207,13 +191,15 @@ int main (void)
     std::cout << "ptr1 usage count: " << ptr1.use_count() << std::endl;
 
     // === SEQUENTIAL DATA STRUCTURES ===
-    std::array<int,3> num_array = {0, 1, 2};
-    std::vector<int> num_vector = {0, 1, 2}; // resizeable
+    // === ARRAY / VECTOR ===
+    std::array<int,3> num_array = {0, 1, 2}; // fixed-size, 3-elements-long array
+    std::vector<int> num_vector = {0, 1, 2}; // resizeable container
     int cStyleArray[] = {-3, -2, -1, 0, 1, 2, 3};
-    std::vector<int> vector_from_array(cStyleArray, cStyleArray + sizeof(cStyleArray)/sizeof(int));
+    std::vector<int> vector_from_array(cStyleArray, cStyleArray + sizeof(cStyleArray)/sizeof(int)); //copy c-tor
     printContainer(vector_from_array);
 
-    // Accessors
+    // === Data Accessors ===
+
     printf("%d %d %d %d 0x%lX\n",
         num_array.at(1),
         num_array[1],
@@ -221,23 +207,23 @@ int main (void)
         num_array.back(),
         reinterpret_cast<std::uintptr_t>(num_array.data()));
 
-    // Forward Iterators
+    // === Forward Iterators ===
     for (auto it = num_array.begin(); it != num_array.end(); it++)
         std::cout << it << ": " << *it << std::endl;
 
-    // Backward Iterators
+    // === Backward Iterators ===
     for (auto it = num_array.rbegin(); it != num_array.rend(); it++)
         std::cout << /* it << ": " << */ *it << std::endl; // suprisingly printing it doesnt work here
 
-    // Checking capacity
+    // === Checking Capacity ===
     std::cout << "Is empty: " << num_array.empty() << ", size: " << num_array.size() << ", max size: " << num_array.max_size() << std::endl;
 
-    // Filling the entire content
+    // === Filling the entire content ===
     num_array.fill(5);
-    for (auto element : num_array)
+    for (auto& element : num_array)
         std::cout << &element << ": " << element << std::endl;
 
-    // Double-ended queue
+    // === DOUBLE-ENDED QUEUE ===
     std::deque<int> num_deque{1, 2, 3};
     num_deque.push_back(5);
     num_deque.push_front(0);
@@ -260,6 +246,7 @@ int main (void)
     printContainer(num_deque);
     printContainerInfo(num_deque);
 
+    // === FORWARD LIST ===
     std::forward_list<string> list1 = {"Ala", "Ma", "Kota"};
     std::forward_list<string> list2 = {"Pies", "Ma", "Alę"};
     std::forward_list<string> list3 = {list1};
@@ -285,6 +272,7 @@ int main (void)
     std::cout << "Merged Sorted List3: " << std::endl;
     printContainer(list3);
 
+    // === DOUBLE-LINKED LIST ===
     std::list<int> ints {0, 1, 4, 5, 6, 122, 4, 2, 5, 88, 4, 2, 7};
     std::list<int> tens {0, 10, 20, 50, 30};
     printContainerInfo(ints);
@@ -306,25 +294,26 @@ int main (void)
     });
     printContainerInfo(ints);
 
-    // set
+    // === SET ===
     std::set<int> int_set {1, 7, 12};
     int_set.insert(9);
     int_set.erase(20);
     int_set.count(9);
 
-    // map
+    // === MAP ===
     std::map<int,string> int_s_map {{1, "ala"}, {5, "kot"}, {3, "ma"}};
     //int_s_map.insert(
     for (const auto& kv : int_s_map)
         std::cout << kv.first << " -> " << kv.second << std::endl;
 
-    // c-style array with for range
+    // C-style array with foreach
     float vals[] = {3.14, 2.7, -1.0};
     for (float& val : vals)
         cout << "Value: " << val << ", address: " << &val << endl;
     for (float val : vals)
         cout << "Value: " << val << ", address: " << &val << endl;
 
+    // === TYPEID ===
     unsigned long long fact5 = ::Algorithms::Math::cfactorial(5U);
     auto oldStyleFact = ::Algorithms::Math::factorial(6U);
     cout << "Silnia 5: " << fact5 << ", size " << sizeof(fact5) << endl;
@@ -333,9 +322,10 @@ int main (void)
     unsigned long long& factRef = fact5;
     // a python style string
     cout << std::format("A factorial {}", factRef) << endl;
-    factRef = oldStyleFact; //reassigning reference
+    factRef = oldStyleFact; //reassigning reference value
     cout << std::format("A factorial {:_^8}", factRef) << endl; //center-aligned for 8 characters with underscores
 
+    // === OLD-STYLE AND NEW-STYLE INITIALIZATION ===
     UnitializedStruct struct1;
     UnitializedStruct struct2 {};
     InitializedStruct struct3;
@@ -347,12 +337,17 @@ int main (void)
     struct4.print(); //this prints defaults (zeros)
     struct5.print();
 
-    // aliases comparison
+    // === ALIASES COMPARISON ===
     result_t typedefedResult = 0u;
     result_u usingResult = 0u;
-    std::cout << std::format("typedef ({0}) size: {1:*<5}, using ({2}) size: {3:0>4}", typedefedResult, sizeof(result_t), usingResult, sizeof(result_u)) << std::endl; // left-aligned 5 characters with *-padding, right-aligned 4 characters with 0-padding
+    std::cout << std::format("typedef ({0}) size: {1}, using ({2}) size: {3}", typedefedResult, sizeof(result_t), usingResult, sizeof(result_u)) << std::endl;
 
-    // bool implicit casting
+    // === OUTPUT FORMATTING ===
+    uint64_t formattedVariable {12u};
+    std::cout << std::format("variable: {0}, \nleft-aligned 5 chars with *-padding: \n{1:*<5}, \nright-aligned 4 characters with 0-padding: \n{2:0>4}",
+        formattedVariable, formattedVariable, formattedVariable) << std::endl;
+
+    // === IMPLICIT CASTING ===
     bool bool_a = true;
     bool_a = 10;
     cout << bool_a << endl;
@@ -380,7 +375,7 @@ int main (void)
 
     printAll(bool_a, fact5, a);
 
-    //file handling
+    // === FILE STREAM HANDLING ===
     static const char * cStyleFilename {"./logs.txt"};
     std::ofstream outputFileStream(cStyleFilename);
     outputFileStream << "<timestamp1>: " << " log1\n";
@@ -398,14 +393,14 @@ int main (void)
 
     DSA::OtherUtils::print("Hi {}\n", "me");
 
+    // === LAMBDA CLOSURE ===
     std::string greetings { "Hey, hi, hello, "};
-
     auto myClosureLambdaExpression = [&greetings] (std::string username) {
         std::cout << greetings << username << std::endl;
     };
-
     myClosureLambdaExpression("Mariusz");
 
+    // === PREDICATE ===
     // Finding all prime numbers in the given vector;
     std::vector<int> v386 {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 100};
     std::vector<int> v387 {};
@@ -413,16 +408,16 @@ int main (void)
     std::copy_if(v386.begin(), v386.end(), std::back_inserter(v387), isPrimeNumberPredicate);
     printContainerInfo(v387);
 
-    // SLEEPS
+    // === SLEEPS ===
     std::cout << "Let's wait a bit, e.g. 3.5s..." << std::endl; //endl is required for flushing before sleeping, otherwise it won't be printed
     auto t0 = std::chrono::steady_clock::now(); // returns a current time point using static function now()
     sleep_for(3s + 500ms);
     std::cout << "Now 2 more seconds..." << std::endl;
     sleep_until(std::chrono::steady_clock::now() + 2s);
-    duration<double> tdiff = std::chrono::steady_clock::now() - t0;
+    std::chrono::duration<double> tdiff = std::chrono::steady_clock::now() - t0;
     std::cout << "Thanks for waiting " << tdiff << std::endl;
 
-    // THREADS
+    // === THREADS - DETACH ===
     thread T1(threadFunc, 10, "T1");
     thread T2(threadFunc, 15, "T2");
     thread T3(threadFunc, 20, "T3");
@@ -432,6 +427,8 @@ int main (void)
 
     std::cout << "Main thread is still working, let's wait some time for other threads before completing main()" << std::endl;
     sleep_for(21s);
+
+    // === THREADS - JOIN ===
     std::cout << "Now run these threads again but in join() mode..." << std::endl;
     thread T1b(threadFunc, 10, "T1"); // we need to create another thread objects that will do the work
     thread T2b(threadFunc, 15, "T2");
@@ -444,12 +441,14 @@ int main (void)
 
     std::cout << "Main thread waited for all other threads. Now can close..." << std::endl;
 
-    // ASYNC
+    // === ASYNC ===
     constexpr size_t numOfThreads {16};
     size_t maxRange {0x800u};
     std::list<std::future<PrimeNumberPromiseResult>> futureList; // or listOfFuturePromises
     for (int i = 0; i < numOfThreads; ++i) {
-        futureList.emplace_back(std::async(getPrimeNumbersAsync, maxRange, 0u)); // appends a list by calling a matching object constructor internally passing given parameters to it, skips redundant copy & move operations normally done in push_back
+        // appends a list by calling a matching object constructor internally passing given parameters to it,
+        // skips redundant copy & move operations normally done in push_back()
+        futureList.emplace_back(std::async(getPrimeNumbersAsync, maxRange, 0u));
         maxRange <<= 1; // 0x800u (2048) * 2^{15} maximum = 0x4000000u (~67M)
     }
     for (auto& futureObj : futureList) {
@@ -457,7 +456,7 @@ int main (void)
         std::cout << std::format("Found {} prime numbers in [{},{}] in {} seconds.", primeNumbers.size(), range.first, range.second, tdiff) << std::endl;
     }
 
-    // PROMISES, FUTURE - original way without the async wrapper
+    // === PROMISES, FUTURE  === - original way without the async wrapper
     maxRange = 0x800u;
     std::list<std::future<PrimeNumberPromiseResult>> futureList2;
     for (int i = 0; i < numOfThreads; ++i) {
@@ -473,62 +472,10 @@ int main (void)
         std::cout << std::format("Found {} prime numbers in [{},{}] in {} seconds.", primeNumbers.size(), range.first, range.second, tdiff) << std::endl;
     }
 
-    // PRODUCER / consumer
+    // === PRODUCER / CONSUMER ===
     std::thread tp {producerThread, 10, "Producer"};
     std::thread tc {consumerThread, 0, "Consumer"};
 
     tp.join();
     tc.join();
-}
-
-void threadFunc(const size_t arg, const char * name) { // still requires declaration above usage
-    for (size_t i = arg; i > 0; --i) {
-        {
-            std::lock_guard<std::mutex> lockGuard {printMutex}; // RAII, releases when out of scope. To make sure we won't send garbage to stream
-            std::cout << std::format("Thread {}, seconds left: {}.", name, i) << std::endl;
-        }
-        sleep_for(std::chrono::seconds(1));
-    }
-    std::cout << std::format("Thread {} finished!", name) << std::endl;
-}
-
-PrimeNumberPromiseResult getPrimeNumbersAsync(const size_t max, const size_t start) {
-    PrimeNumberPromiseResult result {};
-    auto t0 = std::chrono::steady_clock::now();
-    result.primeNumbers = DSA::Algorithms::Math::getPrimeNumbers(static_cast<ulong>(max), static_cast<ulong>(start));
-    result.tdiff = std::chrono::steady_clock::now() - t0;
-    result.range = std::make_pair(start, max);
-    return result;
-}
-
-// This is exactly the same as the one above, but without syntax simplicity of the std::async wrapper
-void getPrimeNumbersPromise(const size_t max, const size_t start, std::promise<PrimeNumberPromiseResult> pval) {
-    PrimeNumberPromiseResult result {};
-    auto t0 = std::chrono::steady_clock::now();
-    result.primeNumbers = DSA::Algorithms::Math::getPrimeNumbers(static_cast<ulong>(max), static_cast<ulong>(start));
-    result.tdiff = std::chrono::steady_clock::now() - t0;
-    result.range = std::make_pair(start, max);
-    pval.set_value(result);
-}
-
-void producerThread(const size_t arg, const char * name) {
-    for (size_t i=0; i < arg; ++i) {
-        auto primes = DSA::Algorithms::Math::getPrimeNumbers(static_cast<ulong>(8388608 + i * 10), static_cast<ulong>(0));
-        auto newPrime = primes[primes.size()-1];
-        std::lock_guard<std::mutex> lockGuard {pMutex};
-        std::cout << std::format("Adding {} to queue", newPrime) << std::endl;
-        fifoQueue.push_back(newPrime);
-    }
-    std::lock_guard<std::mutex> lockGuard {pMutex};
-    ready.test_and_set(); // mark the queue is ready
-}
-
-void consumerThread(const size_t arg, const char * name) {
-    while(!ready.test()) { // do the thread until ready flag is set
-        std::lock_guard<std::mutex> lockGuard {cMutex}; // what if this is pMutex as well?
-        while(!fifoQueue.empty()) { // consume everything at once
-            std::cout << std::format("Getting {} from queue", fifoQueue.front()) << std::endl;
-            fifoQueue.pop_front();
-        }
-    }
 }

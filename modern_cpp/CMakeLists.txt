@@ -7,6 +7,7 @@ configure_file(dsa_config.h.in dsa_config.h) # This populates variables and crea
 add_executable(${TARGET_NAME}
     dsa_main_cpp.cc
     dsa_classes.cc
+    dsa_concurrency.cc
 )
 
 target_include_directories(${TARGET_NAME} PUBLIC
