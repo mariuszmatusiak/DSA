@@ -8,8 +8,11 @@
 #include <iostream>
 #include <concepts> // for adding constraing to templates
 #include <limits>   // for std::numeric_limits
+#include <chrono>   // for std::steady_clock and std::duration
+#include <any>      // for std::any
 
 using namespace std::literals::string_literals;
+using seconds = std::chrono::duration<double>;
 
 namespace DSA::Utils {
 
@@ -56,6 +59,17 @@ concept CustomNumericConstraint = requires(T arg) {
 };
 
 template<typename T>
+concept Callable = requires(T fun) { fun(); };
+
+seconds getExecutionTime(const Callable auto& fun) {
+    auto t_start = std::chrono::steady_clock::now();
+    auto result = fun();
+    auto t_stop = std::chrono::steady_clock::now();
+    seconds diff {t_stop - t_start};
+    return diff;
+}
+
+template<typename T>
 void log(const T c_str, bool force = false) {
     if (verbose || force) {std::cout << c_str << std::endl;}
 }
@@ -95,6 +109,8 @@ void printHeap(const T& container, bool force = false) {
     }
 }
 
+void printObject(const std::any& argument);
+
 template<typename T>
 void printContainerInfo(const T& container, bool force = false)
 {
@@ -102,7 +118,7 @@ void printContainerInfo(const T& container, bool force = false)
         size_t index {0};
         std::cout << "Size of container: " << container.size() << " elements." << std::endl;
         std::cout << "Size of data: " << sizeof(container) << std::endl;
-        for (auto& elem : container)
+        for (const auto& elem : container)
         {
             printf("[%lu] %d, address %p\n", index++, elem, formatPtr(elem));
             // std::cout << "[" << index++ << "] " << elem << std::endl;
@@ -114,6 +130,8 @@ void printContainerInfo(const T& container, bool force = false)
         // }
     }
 }
+
+
 
 template<typename... Args> // multiple-param template
 void printAll(Args&&... args) {

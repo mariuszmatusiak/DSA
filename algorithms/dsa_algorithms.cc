@@ -2,6 +2,24 @@
 
 namespace DSA::Algorithms::Math {
 
+std::optional<unsigned long long> sfactorial (int n)
+{
+    constexpr unsigned long long result { 1ull };
+    if (n < 0) {
+        return {}; // default empty std::optional
+    } else if ((n == 0u) || (n == 1u)) {
+        return result;
+    }
+    else {
+        auto recursiveResult = sfactorial(n-1); // contains also boolean .has_value()
+        if (recursiveResult) { // or if (recursiveResult.has_value()) {...}
+            return static_cast<unsigned long long>(n) * recursiveResult.value(); // or by dereference *recursiveResult
+        } else {
+            return {}; // default empty std::optional
+        }
+    }
+}
+
 unsigned long long factorial (unsigned int n)
 {
     unsigned long long result = 1ull;

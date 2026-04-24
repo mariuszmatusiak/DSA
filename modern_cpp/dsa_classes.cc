@@ -5,6 +5,23 @@ void ExampleOne::printState() const {
     std::cout << "a is " << a << " and b is " << b << ", and c is " << c << std::endl;
 }
 
+ExampleOne::ExampleOne() : c(0u) {
+    std::cout << "Creating " << this << std::endl;
+}
+
+ExampleOne::ExampleOne(uint16_t arg) : c(arg) {
+    std::cout << "Creating " << this << " with " << arg << std::endl;
+}
+
+ExampleOne::ExampleOne(const ExampleOne& o) : c(o.c) {
+    std::cout << "A copy ctor for " << this << " copying " << &o << std::endl;
+    this->privateMember = o.privateMember;
+    this->protectedMember = o.protectedMember;
+    this->publicMember = o.publicMember;
+    this->a = o.a;
+    this->b = o.b;
+}
+
 ExampleOne ExampleOne::operator+(const ExampleOne& right_hand_arg) const {
     // std::cout << "Overloaded sum operator is being called." << std::endl;
     ExampleOne result;

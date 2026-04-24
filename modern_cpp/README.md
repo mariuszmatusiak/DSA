@@ -1,16 +1,23 @@
-# Modern critical C++ topics
+# Modern C++ topics
 
 ## Summary
-- Compiler settings:
+- The compiler settings:
   - ```g++ dsa_01.cpp -Wall -pedantic -o dsa.o -std=c++20 && ./dsa.o```
   - all warnings -Wall
   - `pedantic`
   - standard: `-std=c++20`
+
 - CMake settings:
   1. Create main CMakeLists.txt with minimum version, project name and executable
   2. Create output folder, `cd` inside
   3. Configure project with `cmake ../`
   4. Build project with `cmake --build .`
+
+- Indicating variables as unused:
+  - `[[maybe_unused]]` (C++17 standard compliant)
+  - `__attribute((unused))__` (GCC only)
+  - `(void)var` - casting to void function parameterss
+
 - `operator` overloading
 - `override` keyword
 - `virtual` in declarations
@@ -21,10 +28,13 @@
   - `std::shared_ptr<T>`
   - `std::unique_ptr<T>`
   - `std::weak_ptr<T>`
-- Sequential data structures
-- Associated data structures
-- modern initialization {}
-- lambda -> anonymous function
+- Sequential data structures: lists, vectors, queues, dequeues
+- Associated data structures: sets, maps
+- Modern initialization techniques:
+  - {} - list-initialized with empty list, best since C++11, for primitive types, for vectors it initializes with the given elements
+  - () - a matching constructor
+  - = - a regular copy-assignment operator since C
+- `Lambda` -> anonymous function
   ```C++
   ()=> is
   [/* outside variables passed to scope */](/* fuction arguments */) {
@@ -45,10 +55,10 @@
   - xor == ^
 - constexpr
 - alias:
-  usint mytype = uint16_t is the same as
+  using mytype = uint16_t is the same as
   typedef mytype uint16_t;
 - member and non-member operator overload
-- explicit keyword in constructor - ensures there are no implicit conversions done
+- `explicit` keyword in constructor - ensures there are no implicit conversions normally done by the *implicit type conversion*, e.g. casting double to int.gf
 - default parameters - put in declarations
 - Constructor() = delate; - removes default constructor (derived)
 - noexcept() - compile-time check returning true if expression won't throw exceptions
@@ -87,3 +97,27 @@
   - .compare(), starts_with(), .ends_with()
   - .substr()
   - .sto(i|l|ll|ul|ull|f|d|ld)
+- <random> header, Random Number Generators
+
+- std::optional<T> class - for returning optional results
+- std::any<T> class - for type-safe polymorphism and handling many classes
+- std::variant<T> class [C++17] - type-safe union with std::visit() method
+- structured bindings [C++17]
+- Chrono library for time and interval measurements
+  - Clocks:
+  - system_clock - best to obtain current system time
+  - steady_clock - best to calculate intervals/time diffs
+- std::filesystem library
+  - ::path
+  - ::exists
+  - ::is_directory
+  - ::directory_entry
+  - ::absolute
+  - ::canonical
+  - ::directory_iterator
+  - ::relative
+- std::format [C++20]
+- spaceship operator - to replace all logical comparison operators with one, using the so-called "rewritten expressions" (C++20)
+- integer comparison functions [C++20] (for signed/unsigned comparisons)
+  - std::cmp_{less|less_equal|greater|greater_equal|equal|not_equal}
+- std::span class - a container view-wrapper for C-arrays, vectors or STL array doesn't own

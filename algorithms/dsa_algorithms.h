@@ -9,6 +9,7 @@
 #include <utility>  // for std::move
 #include <concepts> // for adding constraing and limitations to templates, since C++20
 #include <algorithm>
+#include <optional> // for std::optional<T> class
 
 using namespace DSA::Utils;
 using DSA::Utils::log;
@@ -227,6 +228,9 @@ SlidingWindowResult<T> slidingWindow(const T* array, const size_t size, const si
 /**********************************************/
 namespace Math {
 
+// New way with optional
+std::optional<unsigned long long> sfactorial (int n);
+// Old way:
 unsigned long long factorial (unsigned int n); //p. 51
 unsigned long long cfactorial (unsigned int n);
 
