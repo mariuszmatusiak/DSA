@@ -4,6 +4,30 @@
 
 namespace DSA::Utils {
 
+void printObject(const std::any& argument) {
+    if (!argument.has_value()) {
+        std::cout << "An empty argument given" << std::endl;
+    } else {
+        if (argument.type() == typeid(int)) {
+            auto x = std::any_cast<int>(argument);
+            std::cout << "The int is " << x << std::endl;
+        } else if(argument.type() == typeid(std::string)) {
+            auto x = std::any_cast<const std::string&>(argument);
+            std::cout << "The string is " << x << std::endl;
+        } else if(argument.type() == typeid(std::vector<int>)) {
+            auto v = std::any_cast<const std::vector<int>&>(argument);
+            std::cout << "The vector is " << std::endl;
+            printContainer<std::vector<int>>(v, true);
+        //} else if(argument.type() == typeid(std::unordered_map<T>)) {
+        //    auto m = std::any_cast<const std::unordered_map<T>&>(argument);
+        //    std::cout << "The map is " << std::endl;
+        //    printMap(m, true);
+        } else {
+            std::cout << std::format("The type {} not yet supported.", argument.type().name()) << std::endl;
+        }
+    }
+}
+
 bool isIn(const std::string_view& part, const std::string_view& longString) {
     //https://en.cppreference.com/w/cpp/string/basic_string.html
     return (longString.find(part) != std::string::npos);

@@ -6,7 +6,7 @@
 #include <chrono>       // for ::chrono::steady_clock and ::chrono::duration
 #include <thread>       // for ::this_thread::sleep_for and ::this_thread::sleep_until
 #include <future>       // for promises
-#include <mutex>        // for locks
+#include <mutex>        // for std::mutex and std::lock_guard<std::mutex>
 #include <iostream>
 
 using std::chrono::steady_clock;
